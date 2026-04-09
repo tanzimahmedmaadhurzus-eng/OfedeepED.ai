@@ -2,28 +2,30 @@ import streamlit as st
 from groq import Groq
 import os
 
-# --- ADVANCED PAGE CONFIGURATION ---
+# --- CLEAN PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Ofedeeped",
-    layout="centered",
-    initial_sidebar_state="expanded"
+    page_icon="✨",
+    layout="centered"
 )
 
-# --- CUSTOM CSS FOR BRANDING ---
+# --- MINIMALIST STYLING ---
 st.markdown("""
     <style>
-    .main-title {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        color: #1E1E1E;
+    .brand-title {
+        font-family: 'Inter', sans-serif;
+        color: #000000;
         text-align: center;
-        font-size: 50px;
-        font-weight: 800;
-        margin-bottom: 10px;
+        font-size: 60px;
+        font-weight: 900;
+        letter-spacing: -2px;
+        margin-bottom: 20px;
     }
     .stButton>button {
         width: 100%;
-        border-radius: 20px;
-        background-color: #4F46E5;
+        border-radius: 10px;
+        height: 3em;
+        background-color: #000000;
         color: white;
     }
     </style>
@@ -35,48 +37,41 @@ def check_auth():
         st.session_state.authenticated = False
 
     if not st.session_state.authenticated:
-        # Display Branding before Login
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if os.path.exists("logo.png"):
-                st.image("logo.png")
-            else:
-                st.markdown('<p class="main-title">Ofedeeped</p>', unsafe_allow_html=True)
+        # Show Only "Ofedeeped" Branding
+        st.markdown('<p class="brand-title">Ofedeeped</p>', unsafe_allow_html=True)
         
         with st.container():
-            st.subheader("Secure Access / একাউন্ট লগইন")
-            username = st.text_input("Username", placeholder="Enter username")
-            password = st.text_input("Password", type="password", placeholder="Enter password")
+            st.subheader("Login to your account")
+            username = st.text_input("Username", placeholder="tanzimahmedmaadhurzo")
+            password = st.text_input("Password", type="password", placeholder="ofedeeped2026")
             
-            if st.button("Access Dashboard"):
+            if st.button("Enter Ofedeeped"):
                 if username == "tanzimahmedmaadhurzo" and password == "ofedeeped2026":
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
-                    st.error("Invalid credentials. Please try again.")
+                    st.error("Invalid credentials. Try again.")
         return False
     return True
 
-# --- CORE APPLICATION LOGIC ---
+# --- MAIN APP LOGIC ---
 if check_auth():
-    # Sidebar Setup
-    st.sidebar.title("Ofedeeped Control Panel")
-    st.sidebar.markdown("---")
-    
-    # Curriculum Logic Integration
-    curriculum = st.sidebar.selectbox(
-        "Academic Framework",
-        ["NCTB (Bangladesh National Curriculum)", "IB Diploma Program (International)"]
+    # Sidebar Navigation
+    st.sidebar.title("Ofedeeped")
+    curriculum = st.sidebar.radio(
+        "Select Framework",
+        ["NCTB (Bangladesh)", "IB Diploma"]
     )
     
-    api_key = st.sidebar.text_input("Groq API Key", type="password", help="Enter your Groq cloud API key here.")
+    api_key = st.sidebar.text_input("Groq API Key", type="password")
     
-    if st.sidebar.button("Logout"):
+    if st.sidebar.button("Log Out"):
         st.session_state.authenticated = False
         st.rerun()
 
-    # Chat Interface
-    st.markdown(f'<p style="font-size:24px; font-weight:bold;">Ofedeeped AI Tutor ({curriculum})</p>', unsafe_allow_html=True)
+    # Minimalist Header
+    st.markdown('<p style="font-size:32px; font-weight:bold;">Ofedeeped AI</p>', unsafe_allow_html=True)
+    st.caption(f"Curriculum: {curriculum}")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -86,25 +81,23 @@ if check_auth():
             st.markdown(message["content"])
 
     # AI Process Flow
-    if prompt := st.chat_input("Ask a concept (e.g., Quantum Mechanics or Newton's Law)..."):
+    if prompt := st.chat_input("Ask your question..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         if not api_key:
-            st.warning("Action Required: Please enter your Groq API Key in the sidebar.")
+            st.warning("Please provide your API Key in the sidebar.")
         else:
             try:
                 client = Groq(api_key=api_key)
                 
-                # HIGH-LEVEL SYSTEM PROMPTING
+                # Instruction Engine
                 system_instruction = (
-                    f"You are the lead AI Tutor at Ofedeeped Inc. "
-                    f"Strictly adhere to the {curriculum} framework. "
-                    "RESPONSE GUIDELINES: "
-                    "1. Dual-Language Output: Provide every explanation in both English and Bengali. "
-                    "2. 3D Perspective: For Science/Math, describe the object in 3D coordinate space (X, Y, Z). "
-                    "3. Pedagogy: If IB, use inquiry-based learning. If NCTB, follow the latest curriculum standards."
+                    f"You are the Ofedeeped AI specialized in {curriculum}. "
+                    "1. Respond in both English and Bengali. "
+                    "2. For Science/Math, provide a 3D structural analysis. "
+                    "3. Keep the tone professional and helpful."
                 )
 
                 with st.chat_message("assistant"):
@@ -127,5 +120,5 @@ if check_auth():
                 st.session_state.messages.append({"role": "assistant", "content": full_resp})
             
             except Exception as e:
-                st.error(f"System Error: {str(e)}")
-        
+                st.error(f"Error: {str(e)}")
+            
