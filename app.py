@@ -1,51 +1,82 @@
 import streamlit as st
 from groq import Groq
 import os
-from PIL import Image
-import streamlit_authenticator as stauth
 
-# --- Page Config ---
-st.set_page_config(page_title="Ofedeeped", page_icon="🎓", layout="centered")
+# --- ADVANCED PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Ofedeeped",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
 
-# --- Authentication Logic (Simplified for Startup) ---
-names = ['User']
-usernames = ['user123']
-passwords = ['ofedeeped2026'] # আপনি এটি পরিবর্তন করতে পারেন
+# --- CUSTOM CSS FOR BRANDING ---
+st.markdown("""
+    <style>
+    .main-title {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color: #1E1E1E;
+        text-align: center;
+        font-size: 50px;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 20px;
+        background-color: #4F46E5;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-hashed_passwords = stauth.Hasher(passwords).generate()
-credentials = {"usernames":{usernames[0]:{"name":names[0],"password":hashed_passwords[0]}}}
+# --- AUTHENTICATION MODULE ---
+def check_auth():
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
 
-authenticator = stauth.Authenticate(credentials, "ofedeeped_auth", "auth_key", cookie_expiry_days=30)
+    if not st.session_state.authenticated:
+        # Display Branding before Login
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if os.path.exists("logo.png"):
+                st.image("logo.png")
+            else:
+                st.markdown('<p class="main-title">Ofedeeped</p>', unsafe_allow_html=True)
+        
+        with st.container():
+            st.subheader("Secure Access / একাউন্ট লগইন")
+            username = st.text_input("Username", placeholder="Enter username")
+            password = st.text_input("Password", type="password", placeholder="Enter password")
+            
+            if st.button("Access Dashboard"):
+                if username == "tanzimahmedmaadhurzo" and password == "ofedeeped2026":
+                    st.session_state.authenticated = True
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials. Please try again.")
+        return False
+    return True
 
-# --- Initial View: Logo & Login ---
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    try:
-        if os.path.exists("logo.png"):
-            st.image("logo.png", use_container_width=True)
-        else:
-            st.title("🎓 Ofedeeped")
-    except:
-        st.title("🎓 Ofedeeped")
-
-name, authentication_status, username = authenticator.login("Login / একাউন্ট খুলুন", "main")
-
-if authentication_status == False:
-    st.error("Username/password is incorrect")
-elif authentication_status == None:
-    st.info("Please login to access the AI Tutor / এগিয়ে যেতে লগইন করুন।")
-
-# --- Main App (After Successfull Login) ---
-if authentication_status:
-    authenticator.logout("Logout", "sidebar")
+# --- CORE APPLICATION LOGIC ---
+if check_auth():
+    # Sidebar Setup
+    st.sidebar.title("Ofedeeped Control Panel")
+    st.sidebar.markdown("---")
     
-    st.sidebar.title("⚙️ Curriculum Settings")
+    # Curriculum Logic Integration
     curriculum = st.sidebar.selectbox(
-        "Select Curriculum / কারিকুলাম বাছাই করুন",
-        ["NCTB (Bangladesh)", "IB Diploma (International)"]
+        "Academic Framework",
+        ["NCTB (Bangladesh National Curriculum)", "IB Diploma Program (International)"]
     )
     
-    st.sidebar.info(f"Active: {curriculum}")
+    api_key = st.sidebar.text_input("Groq API Key", type="password", help="Enter your Groq cloud API key here.")
+    
+    if st.sidebar.button("Logout"):
+        st.session_state.authenticated = False
+        st.rerun()
+
+    # Chat Interface
+    st.markdown(f'<p style="font-size:24px; font-weight:bold;">Ofedeeped AI Tutor ({curriculum})</p>', unsafe_allow_html=True)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -54,45 +85,47 @@ if authentication_status:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # --- AI Query Logic ---
-    if prompt := st.chat_input("Ask anything (English/বাংলা)..."):
+    # AI Process Flow
+    if prompt := st.chat_input("Ask a concept (e.g., Quantum Mechanics or Newton's Law)..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        groq_api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
-        
-        if not groq_api_key:
-            st.warning("Please enter your API Key in the sidebar to start.")
+        if not api_key:
+            st.warning("Action Required: Please enter your Groq API Key in the sidebar.")
         else:
             try:
-                client = Groq(api_key=groq_api_key)
-                with st.chat_message("assistant"):
-                    response_placeholder = st.empty()
-                    full_response = ""
-                    
-                    # Custom System Prompt for Curriculum
-                    system_prompt = f"""
-                    Your name is Ofedeeped AI. 
-                    1. Provide answers strictly based on the {curriculum} curriculum.
-                    2. If NCTB, focus on Bangladesh context and textbook standards.
-                    3. If IB Diploma, focus on Theory of Knowledge (TOK) and deep conceptual understanding.
-                    4. ALWAYS explain in both English and Bengali (Side-by-side or sectioned).
-                    5. For Science/Math, include a '3D Perspective' section explaining the spatial structure.
-                    """
+                client = Groq(api_key=api_key)
+                
+                # HIGH-LEVEL SYSTEM PROMPTING
+                system_instruction = (
+                    f"You are the lead AI Tutor at Ofedeeped Inc. "
+                    f"Strictly adhere to the {curriculum} framework. "
+                    "RESPONSE GUIDELINES: "
+                    "1. Dual-Language Output: Provide every explanation in both English and Bengali. "
+                    "2. 3D Perspective: For Science/Math, describe the object in 3D coordinate space (X, Y, Z). "
+                    "3. Pedagogy: If IB, use inquiry-based learning. If NCTB, follow the latest curriculum standards."
+                )
 
-                    completion = client.chat.completions.create(
+                with st.chat_message("assistant"):
+                    response_area = st.empty()
+                    full_resp = ""
+                    
+                    stream = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
-                        messages=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
+                        messages=[{"role": "system", "content": system_instruction}] + st.session_state.messages,
                         stream=True
                     )
-                    for chunk in completion:
-                        content = chunk.choices[0].delta.content
-                        if content:
-                            full_response += content
-                            response_placeholder.markdown(full_response + "█")
-                    response_placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                    
+                    for chunk in stream:
+                        text = chunk.choices[0].delta.content
+                        if text:
+                            full_resp += text
+                            response_area.markdown(full_resp + "▌")
+                    response_area.markdown(full_resp)
+                
+                st.session_state.messages.append({"role": "assistant", "content": full_resp})
             
+            except Exception as e:
+                st.error(f"System Error: {str(e)}")
+        
