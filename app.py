@@ -34,7 +34,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # --- AI Logic ---
-if prompt := st.chat_input("বইয়ের যেকোনো প্রশ্ন এখানে লিখুন (যেমন: নবম শ্রেণীর গণিত)..."):
+if prompt := st.chat_input("বইয়ের যেকোনো প্রশ্ন এখানে লিখুন..."):
     if not groq_api_key:
         st.error("দয়া করে সাইডবারে আপনার Groq API Key-টি দিন।")
     else:
@@ -43,24 +43,19 @@ if prompt := st.chat_input("বইয়ের যেকোনো প্রশ্�
             st.markdown(prompt)
 
         try:
-            # Groq Client Initialization
             client = Groq(api_key=groq_api_key)
             
             with st.chat_message("assistant"):
                 response_placeholder = st.empty()
                 full_response = ""
                 
-                # Ofedeep AI Custom Instructions
+                # সচল মডেলের নাম এখানে আপডেট করা হয়েছে
                 completion = client.chat.completions.create(
-                    model="llama3-8b-8192", # সুপার ফাস্ট ওপেন সোর্স মডেল
+                    model="llama-3.3-70b-versatile", 
                     messages=[
                         {
                             "role": "system", 
-                            "content": """Your name is Ofedeep AI. You are a private academic assistant for students in Bangladesh (Class 1-12).
-                            1. You have 100% knowledge of NCTB (National Curriculum and Textbook Board) books.
-                            2. You must answer in Bengali if the student asks in Bengali.
-                            3. For Math and Science, provide step-by-step solutions with clear logic.
-                            4. Be polite, professional, and act like a senior teacher from Bangladesh."""
+                            "content": "Your name is Ofedeep AI. You are a senior expert teacher in Bangladesh for Class 1-12. Answer in Bengali if asked in Bengali."
                         },
                         *st.session_state.messages
                     ],
