@@ -1,84 +1,82 @@
 import streamlit as st
-from openai import OpenAI
-import base64
-import os
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
+from groq import Groq
 
-# --- SECURE VAULT ENGINE ---
-class AfedipVault:
-    def __init__(self, password: str):
-        self.salt = b"afedip_secure_salt_2026" 
-        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=self.salt, iterations=100000)
-        self.key = kdf.derive(password.encode())
+# --- UI & Branding ---
+st.set_page_config(page_title="Ofedeep AI | 100% Student Solution", page_icon="🛡️", layout="centered")
 
-    def encrypt(self, text: str) -> str:
-        aes = AESGCM(self.key)
-        nonce = os.urandom(12)
-        encrypted = aes.encrypt(nonce, text.encode(), None)
-        return base64.b64encode(nonce + encrypted).decode()
+st.markdown("""
+    <style>
+    .stApp { background-color: #f8f9fa; }
+    .main-title { color: #1E3A8A; font-size: 35px; font-weight: bold; text-align: center; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    def decrypt(self, encrypted_text: str) -> str:
-        data = base64.b64decode(encrypted_text)
-        aes = AESGCM(self.key)
-        return aes.decrypt(data[:12], data[12:], None).decode()
+st.markdown('<p class="main-title">🛡️ Ofedeep AI: Digital Tutor</p>', unsafe_allow_html=True)
+st.caption("বাংলাদেশের ১ম-১২তম শ্রেণীর সকল বই ও শিক্ষা সহায়তায় নিবেদিত নিজস্ব এআই।")
 
-# --- INTERFACE ---
-st.set_page_config(page_title="AFEDIP: Advanced AI", page_icon="🛡️")
-st.title("🛡️ AFEDIP SECURE AI SYSTEM")
-
-if "messages" not in st.session_state: st.session_state.messages = []
-if "vault" not in st.session_state: st.session_state.vault = None
-
+# --- Sidebar Configuration ---
 with st.sidebar:
-    st.header("SECURITY PANEL")
-    master_pass = st.text_input("Master Password", type="password")
-    api_key_input = st.text_input("OpenAI API Key", type="password")
-    if st.button("INITIALIZE"):
-        if master_pass and api_key_input:
-            try:
-                st.session_state.vault = AfedipVault(master_pass)
-                st.session_state.enc_key = st.session_state.vault.encrypt(api_key_input)
-                st.success("AES-256 VAULT ACTIVE")
-            except Exception as e:
-                st.error(f"Initialization Failed: {str(e)}")
+    st.header("🔑 Private Access")
+    groq_api_key = st.text_input("Enter Groq API Key", type="password")
+    st.divider()
+    st.info("এটি Ofedeep AI-এর নিজস্ব সার্ভার ব্যবহার করে, যা ১০০% ফ্রি এবং দ্রুত।")
+    if st.button("Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
 
-# --- CHAT LOGIC ---
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]): st.markdown(m["content"])
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if prompt := st.chat_input("Enter your query..."):
-    if not st.session_state.vault:
-        st.error("INITIALIZE SECURITY FIRST")
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# --- AI Logic ---
+if prompt := st.chat_input("বইয়ের যেকোনো প্রশ্ন এখানে লিখুন (যেমন: নবম শ্রেণীর গণিত)..."):
+    if not groq_api_key:
+        st.error("দয়া করে সাইডবারে আপনার Groq API Key-টি দিন।")
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.markdown(prompt)
-        
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
         try:
-            # New OpenAI Client Structure
-            decrypted_key = st.session_state.vault.decrypt(st.session_state.enc_key)
-            client = OpenAI(api_key=decrypted_key)
+            # Groq Client Initialization
+            client = Groq(api_key=groq_api_key)
             
             with st.chat_message("assistant"):
-                full_res = ""
-                res_box = st.empty()
+                response_placeholder = st.empty()
+                full_response = ""
                 
-                response = client.chat.completions.create(
-                    model="gpt-4o",
+                # Ofedeep AI Custom Instructions
+                completion = client.chat.completions.create(
+                    model="llama3-8b-8192", # সুপার ফাস্ট ওপেন সোর্স মডেল
                     messages=[
-                        {"role": "system", "content": "You are AFEDIP AI. Expert academic tutor. Use professional English."}, 
+                        {
+                            "role": "system", 
+                            "content": """Your name is Ofedeep AI. You are a private academic assistant for students in Bangladesh (Class 1-12).
+                            1. You have 100% knowledge of NCTB (National Curriculum and Textbook Board) books.
+                            2. You must answer in Bengali if the student asks in Bengali.
+                            3. For Math and Science, provide step-by-step solutions with clear logic.
+                            4. Be polite, professional, and act like a senior teacher from Bangladesh."""
+                        },
                         *st.session_state.messages
                     ],
                     stream=True
                 )
                 
-                for chunk in response:
-                    if chunk.choices[0].delta.content is not None:
-                        full_res += chunk.choices[0].delta.content
-                        res_box.markdown(full_res + "█")
+                for chunk in completion:
+                    content = chunk.choices[0].delta.content
+                    if content is not None:
+                        full_response += content
+                        response_placeholder.markdown(full_response + "█")
                 
-                res_box.markdown(full_res)
-                st.session_state.messages.append({"role": "assistant", "content": full_res})
-        except Exception as e: 
-            st.error(f"ERROR: {str(e)}")
+                response_placeholder.markdown(full_response)
+            
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+        except Exception as e:
+            st.error(f"সার্ভার ত্রুটি: {str(e)}")
+            
