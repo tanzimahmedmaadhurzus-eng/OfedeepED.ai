@@ -1,26 +1,26 @@
 import streamlit as st
 from groq import Groq
 import os
+from PIL import Image
 
 # --- Page Config ---
 st.set_page_config(page_title="Ofedeeped AI | Bilingual & 3D", page_icon="🎓", layout="centered")
 
-# --- Logo Display ---
+# --- Logo handling with Error fix ---
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    if os.path.exists("logo.png"):
-        st.image("logo.png", use_container_width=True)
-    else:
-        st.title("🎓 Ofedeeped AI")
+    try:
+        if os.path.exists("logo.png"):
+            img = Image.open("logo.png")
+            st.image(img, use_container_width=True)
+        else:
+            st.title("🎓 Ofedeeped AI")
+    except Exception:
+        st.title("🎓 Ofedeeped AI") # লোগোতে এরর থাকলে নাম দেখাবে অ্যাপ ক্র্যাশ করবে না
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #f0f2f6; }
-    .bilingual-box { border-left: 5px solid #1E3A8A; padding-left: 15px; margin: 10px 0; }
-    </style>
-    """, unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center;'>Bilingual Learning & 3D Visualization</h4>", unsafe_allow_html=True)
 
-# --- Settings ---
+# --- Sidebar ---
 with st.sidebar:
     st.header("⚙️ Settings")
     groq_api_key = st.text_input("Enter Groq API Key", type="password")
@@ -35,10 +35,10 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- AI Logic ---
-if prompt := st.chat_input("Ask anything... / যেকোনো প্রশ্ন করুন..."):
+# --- AI Logic (Bilingual + 3D) ---
+if prompt := st.chat_input("যেকোনো প্রশ্ন করুন (English/বাংলা)..."):
     if not groq_api_key:
-        st.error("Please provide API Key in the sidebar.")
+        st.error("Please provide your Groq API Key.")
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -56,13 +56,9 @@ if prompt := st.chat_input("Ask anything... / যেকোনো প্রশ্
                         {
                             "role": "system", 
                             "content": """Your name is Ofedeeped AI. 
-                            RULES:
-                            1. Answer EVERY query in both Bengali and English.
-                            2. For Science/Math topics, always provide a '3D Visualization' section where you describe the object or process in a 3D perspective (X, Y, Z axis) to help the student imagine it.
-                            3. Structure: 
-                               - [English Version]
-                               - [Bengali Version]
-                               - [3D Visualization / ৩ডি কল্পনা]"""
+                            1. Answer ALWAYS in both English and Bengali.
+                            2. For Science/Academic topics, include a section called '3D Perspective' where you explain the spatial structure or process (e.g., describing an atom or cells in 3D).
+                            3. Style: Professional teacher."""
                         },
                         *st.session_state.messages
                     ],
@@ -77,4 +73,4 @@ if prompt := st.chat_input("Ask anything... / যেকোনো প্রশ্
             st.session_state.messages.append({"role": "assistant", "content": full_response})
         except Exception as e:
             st.error(f"Error: {str(e)}")
-        
+    
