@@ -2,11 +2,11 @@ import streamlit as st
 from groq import Groq
 import os
 
-# --- পেজ কনফিগারেশন ---
-st.set_page_config(page_title="Ofedeeped AI | 100% Solution", page_icon="🎓", layout="centered")
+# --- Page Config ---
+st.set_page_config(page_title="Ofedeeped AI | Bilingual & 3D", page_icon="🎓", layout="centered")
 
-# --- লোগো ডিসপ্লে সেকশন ---
-col1, col2, col3 = st.columns([1, 2, 1]) # লোগো মাঝখানে রাখার জন্য
+# --- Logo Display ---
+col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if os.path.exists("logo.png"):
         st.image("logo.png", use_container_width=True)
@@ -15,35 +15,30 @@ with col2:
 
 st.markdown("""
     <style>
-    .stApp { background-color: #f8f9fa; }
-    .stChatFloatingInputContainer { bottom: 20px; }
+    .stApp { background-color: #f0f2f6; }
+    .bilingual-box { border-left: 5px solid #1E3A8A; padding-left: 15px; margin: 10px 0; }
     </style>
     """, unsafe_allow_html=True)
 
-st.caption("<center>বাংলাদেশের ১-১২ শ্রেণীর সকল বই ও শিক্ষা সহায়তায় নিবেদিত নিজস্ব এআই।</center>", unsafe_allow_html=True)
-
-# --- সাইডবার সেটিংস ---
+# --- Settings ---
 with st.sidebar:
     st.header("⚙️ Settings")
-    groq_api_key = st.text_input("আপনার Groq API Key দিন", type="password")
-    st.divider()
-    if st.button("নতুন চ্যাট শুরু করুন"):
+    groq_api_key = st.text_input("Enter Groq API Key", type="password")
+    if st.button("New Chat / নতুন চ্যাট"):
         st.session_state.messages = []
         st.rerun()
 
-# চ্যাট হিস্ট্রি শুরু করা
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# আগের কথাগুলো দেখানো
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- মূল চ্যাট লজিক ---
-if prompt := st.chat_input("বইয়ের যেকোনো প্রশ্ন এখানে লিখুন..."):
+# --- AI Logic ---
+if prompt := st.chat_input("Ask anything... / যেকোনো প্রশ্ন করুন..."):
     if not groq_api_key:
-        st.error("দয়া করে সাইডবারে আপনার Groq API Key-টি দিন।")
+        st.error("Please provide API Key in the sidebar.")
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -58,7 +53,17 @@ if prompt := st.chat_input("বইয়ের যেকোনো প্রশ্�
                 completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile", 
                     messages=[
-                        {"role": "system", "content": "You are Ofedeeped AI. A senior expert teacher for Class 1-12 in Bangladesh. Answer clearly in Bengali."},
+                        {
+                            "role": "system", 
+                            "content": """Your name is Ofedeeped AI. 
+                            RULES:
+                            1. Answer EVERY query in both Bengali and English.
+                            2. For Science/Math topics, always provide a '3D Visualization' section where you describe the object or process in a 3D perspective (X, Y, Z axis) to help the student imagine it.
+                            3. Structure: 
+                               - [English Version]
+                               - [Bengali Version]
+                               - [3D Visualization / ৩ডি কল্পনা]"""
+                        },
                         *st.session_state.messages
                     ],
                     stream=True
