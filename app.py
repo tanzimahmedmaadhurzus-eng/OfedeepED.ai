@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import base64
 import os
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -9,7 +9,6 @@ from cryptography.hazmat.primitives import hashes
 # --- SECURE VAULT ENGINE ---
 class AfedipVault:
     def __init__(self, password: str):
-        # Fixed the salt value error here
         self.salt = b"afedip_secure_salt_2026" 
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=self.salt, iterations=100000)
         self.key = kdf.derive(password.encode())
@@ -35,12 +34,12 @@ if "vault" not in st.session_state: st.session_state.vault = None
 with st.sidebar:
     st.header("SECURITY PANEL")
     master_pass = st.text_input("Master Password", type="password")
-    api_key = st.text_input("OpenAI API Key", type="password")
+    api_key_input = st.text_input("OpenAI API Key", type="password")
     if st.button("INITIALIZE"):
-        if master_pass and api_key:
+        if master_pass and api_key_input:
             try:
                 st.session_state.vault = AfedipVault(master_pass)
-                st.session_state.enc_key = st.session_state.vault.encrypt(api_key)
+                st.session_state.enc_key = st.session_state.vault.encrypt(api_key_input)
                 st.success("AES-256 VAULT ACTIVE")
             except Exception as e:
                 st.error(f"Initialization Failed: {str(e)}")
@@ -57,20 +56,28 @@ if prompt := st.chat_input("Enter your query..."):
         with st.chat_message("user"): st.markdown(prompt)
         
         try:
-            openai.api_key = st.session_state.vault.decrypt(st.session_state.enc_key)
+            # New OpenAI Client Structure
+            decrypted_key = st.session_state.vault.decrypt(st.session_state.enc_key)
+            client = OpenAI(api_key=decrypted_key)
+            
             with st.chat_message("assistant"):
                 full_res = ""
                 res_box = st.empty()
-                response = openai.ChatCompletion.create(
+                
+                response = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "system", "content": "You are AFEDIP AI. Expert academic tutor for Bangladesh curriculum. Use professional English."}, 
-                              *st.session_state.messages],
+                    messages=[
+                        {"role": "system", "content": "You are AFEDIP AI. Expert academic tutor. Use professional English."}, 
+                        *st.session_state.messages
+                    ],
                     stream=True
                 )
+                
                 for chunk in response:
-                    content = chunk.choices[0].delta.get("content", "")
-                    full_res += content
-                    res_box.markdown(full_res + "█")
+                    if chunk.choices[0].delta.content is not None:
+                        full_res += chunk.choices[0].delta.content
+                        res_box.markdown(full_res + "█")
+                
                 res_box.markdown(full_res)
                 st.session_state.messages.append({"role": "assistant", "content": full_res})
         except Exception as e: 
