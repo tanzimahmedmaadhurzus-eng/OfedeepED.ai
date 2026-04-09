@@ -9,7 +9,8 @@ from cryptography.hazmat.primitives import hashes
 # --- SECURE VAULT ENGINE ---
 class AfedipVault:
     def __init__(self, password: str):
-        self.salt = b'\xaf\xed\xip\x00\x11\x22'
+        # Fixed the salt value error here
+        self.salt = b"afedip_secure_salt_2026" 
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=self.salt, iterations=100000)
         self.key = kdf.derive(password.encode())
 
@@ -37,9 +38,12 @@ with st.sidebar:
     api_key = st.text_input("OpenAI API Key", type="password")
     if st.button("INITIALIZE"):
         if master_pass and api_key:
-            st.session_state.vault = AfedipVault(master_pass)
-            st.session_state.enc_key = st.session_state.vault.encrypt(api_key)
-            st.success("AES-256 VAULT ACTIVE")
+            try:
+                st.session_state.vault = AfedipVault(master_pass)
+                st.session_state.enc_key = st.session_state.vault.encrypt(api_key)
+                st.success("AES-256 VAULT ACTIVE")
+            except Exception as e:
+                st.error(f"Initialization Failed: {str(e)}")
 
 # --- CHAT LOGIC ---
 for m in st.session_state.messages:
@@ -64,9 +68,10 @@ if prompt := st.chat_input("Enter your query..."):
                     stream=True
                 )
                 for chunk in response:
-                    full_res += chunk.choices[0].delta.get("content", "")
+                    content = chunk.choices[0].delta.get("content", "")
+                    full_res += content
                     res_box.markdown(full_res + "█")
                 res_box.markdown(full_res)
                 st.session_state.messages.append({"role": "assistant", "content": full_res})
-        except Exception as e: st.error(f"ERROR: {str(e)}")
-
+        except Exception as e: 
+            st.error(f"ERROR: {str(e)}")
